@@ -1,6 +1,8 @@
+// TransactionForm.js
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Picker } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import axios from 'axios';
+import { Picker } from '@react-native-picker/picker';
 
 const TransactionForm = () => {
   const [formData, setFormData] = useState({
@@ -11,55 +13,63 @@ const TransactionForm = () => {
     type: 'expense'
   });
 
+  const handleChange = (name, value) => {
+    setFormData({ ...formData, [name]: value });
+  };
+
   const handleSubmit = async () => {
-    await axios.post('https://finance-viz-backend.onrender.com/api/budgets', formData);
-    setFormData({ amount: '', date: '', description: '', category: 'Others', type: 'expense' });
+    try {
+      await axios.post('https://finance-viz-backend.onrender.com/api/budgets', formData);
+      Alert.alert('Success', 'Transaction Added Successfully!');
+      setFormData({ amount: '', date: '', description: '', category: 'Others', type: 'expense' });
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    }
   };
 
   return (
-    <View style={styles.formContainer}>
-      <Text style={styles.formTitle}>Add Transaction</Text>
-      
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.heading}>Add Transaction</Text>
+
       <View style={styles.inputGroup}>
-        <Text>Amount</Text>
+        <Text style={styles.label}>Amount</Text>
         <TextInput
           style={styles.input}
-          placeholder="Amount"
-          value={formData.amount}
-          onChangeText={(text) => setFormData({ ...formData, amount: text })}
+          placeholder="Enter amount"
           keyboardType="numeric"
-          required
+          value={formData.amount}
+          onChangeText={(text) => handleChange('amount', text)}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text>Date</Text>
+        <Text style={styles.label}>Date</Text>
         <TextInput
           style={styles.input}
-          value={formData.date}
-          onChangeText={(text) => setFormData({ ...formData, date: text })}
           placeholder="YYYY-MM-DD"
-          required
+          value={formData.date}
+          onChangeText={(text) => handleChange('date', text)}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text>Description</Text>
+        <Text style={styles.label}>Description</Text>
         <TextInput
           style={styles.input}
-          placeholder="Description"
+          placeholder="Enter description"
           value={formData.description}
-          onChangeText={(text) => setFormData({ ...formData, description: text })}
-          required
+          onChangeText={(text) => handleChange('description', text)}
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text>Category</Text>
-        <View style={styles.pickerContainer}>
+        <Text style={styles.label}>Category</Text>
+        <View style={styles.pickerWrapper}>
           <Picker
             selectedValue={formData.category}
-            onValueChange={(itemValue) => setFormData({ ...formData, category: itemValue })}
+            onValueChange={(itemValue) => handleChange('category', itemValue)}
+            style={styles.picker}
           >
             <Picker.Item label="Food" value="Food" />
             <Picker.Item label="Utilities" value="Utilities" />
@@ -74,11 +84,12 @@ const TransactionForm = () => {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text>Type</Text>
-        <View style={styles.pickerContainer}>
+        <Text style={styles.label}>Type</Text>
+        <View style={styles.pickerWrapper}>
           <Picker
             selectedValue={formData.type}
-            onValueChange={(itemValue) => setFormData({ ...formData, type: itemValue })}
+            onValueChange={(itemValue) => handleChange('type', itemValue)}
+            style={styles.picker}
           >
             <Picker.Item label="Expense" value="expense" />
             <Picker.Item label="Income" value="income" />
@@ -86,38 +97,62 @@ const TransactionForm = () => {
         </View>
       </View>
 
-      <Button title="Add" onPress={handleSubmit} />
-    </View>
+      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+        <Text style={styles.submitButtonText}>Add</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 16,
-    marginVertical: 8,
+  container: {
+    padding: 20,
+    paddingBottom: 50,
   },
-  formTitle: {
-    fontSize: 18,
+  heading: {
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#fff',
   },
   inputGroup: {
-    marginBottom: 12,
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 14,
+    marginBottom: 5,
+    color: '#aaa',
   },
   input: {
+    backgroundColor: '#1e1e2f',
+    borderRadius: 6,
+    padding: 10,
+    color: '#fff',
+    fontSize: 14,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    padding: 8,
-    marginTop: 4,
+    borderColor: '#444',
   },
-  pickerContainer: {
+  pickerWrapper: {
+    backgroundColor: '#1e1e2f',
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    marginTop: 4,
+    borderColor: '#444',
+    overflow: 'hidden',
+  },
+  picker: {
+    color: '#fff',
+  },
+  submitButton: {
+    backgroundColor: '#3e7bfa',
+    padding: 15,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
 });
 

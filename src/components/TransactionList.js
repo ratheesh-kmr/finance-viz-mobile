@@ -1,5 +1,6 @@
+// TransactionList.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, Modal, StyleSheet, TextInput, Button } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, FlatList, Modal, StyleSheet, ScrollView, Alert } from 'react-native';
 import axios from 'axios';
 
 const TransactionList = () => {
@@ -39,7 +40,7 @@ const TransactionList = () => {
       description: transaction.description,
       category: transaction.category,
       date: transaction.date.slice(0, 10),
-      amount: transaction.amount.toString(),
+      amount: transaction.amount,
       type: transaction.type,
     });
     setShowModal(true);
@@ -48,7 +49,13 @@ const TransactionList = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditingId(null);
-    setEditForm({});
+    setEditForm({
+      description: '',
+      category: '',
+      date: '',
+      amount: '',
+      type: 'expense',
+    });
   };
 
   const updateTransaction = async () => {
@@ -56,8 +63,10 @@ const TransactionList = () => {
       await axios.put(`https://finance-viz-backend.onrender.com/api/transactions/${editingId}`, editForm);
       closeModal();
       fetchTransactions();
+      Alert.alert('Success', 'Transaction Updated!');
     } catch (err) {
       console.error('Error updating transaction:', err);
+      Alert.alert('Error', 'Could not update transaction');
     }
   };
 
@@ -65,194 +74,242 @@ const TransactionList = () => {
     fetchTransactions();
   }, []);
 
+  const renderTransactionItem = ({ item }) => (
+    <TouchableOpacity style={styles.transactionItem} onPress={() => openEditModal(item)}>
+      <View style={styles.transactionDetails}>
+        <Text style={styles.transactionDesc}>{item.description}</Text>
+        <Text style={styles.transactionCategory}>{item.category}</Text>
+      </View>
+      <Text style={styles.transactionDate}>{new Date(item.date).toLocaleDateString()}</Text>
+      <Text style={[
+        styles.transactionAmount,
+        item.type === 'income' ? styles.income : styles.expense
+      ]}>
+        {item.type === 'income' ? '+' : '-'}₹{Number(item.amount).toLocaleString()}
+      </Text>
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={(e) => {
+          e.stopPropagation();
+          deleteTransaction(item._id);
+        }}
+      >
+        <Text style={styles.deleteButtonText}>Remove</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerText}>Recent Transactions</Text>
-        <TouchableOpacity onPress={() => setShowAllTransactions(!showAllTransactions)}>
-          <Text style={styles.viewAllText}>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Recent Transactions</Text>
+        <TouchableOpacity
+          style={styles.viewAllButton}
+          onPress={() => setShowAllTransactions(!showAllTransactions)}
+        >
+          <Text style={styles.viewAllButtonText}>
             {showAllTransactions ? 'Show Less' : 'View All'}
           </Text>
         </TouchableOpacity>
       </View>
 
       {transactions.length === 0 ? (
-        <Text style={styles.emptyMessage}>No transactions yet.</Text>
+        <Text style={styles.emptyText}>No transactions yet.</Text>
       ) : (
         <FlatList
           data={showAllTransactions ? transactions : transactions.slice(0, 4)}
+          renderItem={renderTransactionItem}
           keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => openEditModal(item)}>
-              <View style={styles.transactionItem}>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.description}>{item.description}</Text>
-                  <Text style={styles.category}>{item.category}</Text>
-                  <Text style={styles.date}>
-                    {new Date(item.date).toLocaleDateString()}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.amount,
-                      item.type === 'income' ? styles.income : styles.expense,
-                    ]}
-                  >
-                    {item.type === 'income' ? '+' : '-'}₹{Number(item.amount).toLocaleString()}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    deleteTransaction(item._id);
-                  }}
-                >
-                  <Text style={styles.deleteText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          )}
+          scrollEnabled={false}
         />
       )}
 
-      <Modal visible={showModal} animationType="slide">
-        <View style={styles.modalContainer}>
-          <Text style={styles.modalTitle}>Edit Transaction</Text>
-          
-          <TextInput
-            style={styles.modalInput}
-            placeholder="Description"
-            value={editForm.description}
-            onChangeText={(text) => setEditForm({ ...editForm, description: text })}
-            required
-          />
-          
-          <TextInput
-            style={styles.modalInput}
-            placeholder="Category"
-            value={editForm.category}
-            onChangeText={(text) => setEditForm({ ...editForm, category: text })}
-            required
-          />
-          
-          <TextInput
-            style={styles.modalInput}
-            value={editForm.date}
-            onChangeText={(text) => setEditForm({ ...editForm, date: text })}
-            placeholder="YYYY-MM-DD"
-            required
-          />
-          
-          <TextInput
-            style={styles.modalInput}
-            placeholder="Amount"
-            value={editForm.amount}
-            onChangeText={(text) => setEditForm({ ...editForm, amount: text })}
-            keyboardType="numeric"
-            required
-          />
-          
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={editForm.type}
-              onValueChange={(itemValue) => setEditForm({ ...editForm, type: itemValue })}
-            >
-              <Picker.Item label="Income" value="income" />
-              <Picker.Item label="Expense" value="expense" />
-            </Picker>
-          </View>
-          
-          <View style={styles.modalButtons}>
-            <Button title="Save" onPress={updateTransaction} />
-            <Button title="Cancel" onPress={closeModal} color="#999" />
+      {/* Modal for Editing */}
+      <Modal
+        visible={showModal}
+        transparent
+        animationType="fade"
+        onRequestClose={closeModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modal}>
+            <Text style={styles.modalTitle}>Edit Transaction</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Description"
+              value={editForm.description}
+              onChangeText={(text) => setEditForm({ ...editForm, description: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Category"
+              value={editForm.category}
+              onChangeText={(text) => setEditForm({ ...editForm, category: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD"
+              value={editForm.date}
+              onChangeText={(text) => setEditForm({ ...editForm, date: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Amount"
+              keyboardType="numeric"
+              value={editForm.amount.toString()}
+              onChangeText={(text) => setEditForm({ ...editForm, amount: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Type (income/expense)"
+              value={editForm.type}
+              onChangeText={(text) => setEditForm({ ...editForm, type: text })}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.saveButton} onPress={updateTransaction}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    marginVertical: 16,
+    padding: 20,
+    paddingBottom: 40,
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 20,
     alignItems: 'center',
-    marginBottom: 12,
   },
-  headerText: {
-    fontSize: 18,
+  title: {
+    fontSize: 20,
+    color: '#fff',
     fontWeight: 'bold',
   },
-  viewAllText: {
-    color: '#007AFF',
+  viewAllButton: {
+    borderWidth: 1,
+    borderColor: '#555',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
   },
-  emptyMessage: {
+  viewAllButtonText: {
+    color: '#ccc',
+  },
+  emptyText: {
+    color: '#888',
+    fontStyle: 'italic',
     textAlign: 'center',
-    marginVertical: 16,
-    color: '#999',
+    marginTop: 20,
   },
   transactionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  transactionInfo: {
-    flex: 1,
-  },
-  description: {
-    fontWeight: 'bold',
-  },
-  category: {
-    color: '#666',
-  },
-  date: {
-    color: '#666',
-  },
-  amount: {
-    fontWeight: 'bold',
-  },
-  income: {
-    color: 'green',
-  },
-  expense: {
-    color: 'red',
-  },
-  deleteText: {
-    color: 'red',
-  },
-  modalContainer: {
-    flex: 1,
+    backgroundColor: '#1e1e2f',
+    borderRadius: 8,
     padding: 16,
-    justifyContent: 'center',
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
+  transactionDetails: {
+    flex: 2,
+  },
+  transactionDesc: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  transactionCategory: {
+    color: '#aaa',
+    fontSize: 12,
+  },
+  transactionDate: {
+    flex: 1,
+    color: '#ccc',
+    fontSize: 12,
     textAlign: 'center',
   },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    padding: 12,
-    marginBottom: 12,
+  transactionAmount: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'right',
   },
-  pickerContainer: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
-    marginBottom: 16,
+  income: {
+    color: '#28a745',
   },
-  modalButtons: {
+  expense: {
+    color: '#dc3545',
+  },
+  deleteButton: {
+    marginLeft: 10,
+    backgroundColor: '#f44336',
+    borderRadius: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modal: {
+    backgroundColor: '#2a2a3d',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
+  },
+  modalTitle: {
+    fontSize: 18,
+    marginBottom: 15,
+    color: '#fff',
+    textAlign: 'center',
+  },
+  input: {
+    backgroundColor: '#1e1e2f',
+    color: '#fff',
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 6,
+  },
+  modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginTop: 10,
+  },
+  saveButton: {
+    backgroundColor: '#4caf50',
+    padding: 10,
+    borderRadius: 6,
+    flex: 1,
+    marginRight: 5,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#f44336',
+    padding: 10,
+    borderRadius: 6,
+    flex: 1,
+    marginLeft: 5,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
   },
 });
 

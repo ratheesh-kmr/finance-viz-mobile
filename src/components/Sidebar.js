@@ -1,110 +1,140 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+// Sidebar.js
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
 const Sidebar = () => {
+  const [collapsed, setCollapsed] = useState(false);
   const navigation = useNavigation();
-  
+  const route = useRoute();
+  const currentPath = route.name;
+
+  const handleToggle = () => {
+    setCollapsed(!collapsed);
+  };
+
+  const MenuItem = ({ label, screenName }) => (
+    <TouchableOpacity
+      style={[
+        styles.navItem,
+        currentPath === screenName && styles.activeNavItem,
+      ]}
+      onPress={() => navigation.navigate(screenName)}
+    >
+      {/* You can replace Text with an Icon later */}
+      <Text style={styles.iconPlaceholder}>🔹</Text>
+      {!collapsed && <Text style={styles.navText}>{label}</Text>}
+    </TouchableOpacity>
+  );
+
   return (
-    <View style={styles.sidebar}>
+    <SafeAreaView style={[styles.sidebar, collapsed && styles.sidebarCollapsed]}>
+      {/* Header */}
       <View style={styles.sidebarHeader}>
-        <View style={styles.appLogo}>
-          <Text style={styles.logoIcon}>💰</Text>
-          <Text style={styles.logoText}>FinanceViz</Text>
-          <Text style={styles.logoSubtext}>Mobile App</Text>
-        </View>
+        <Text style={styles.iconPlaceholder}>💰</Text>
+        {!collapsed && (
+          <>
+            <Text style={styles.logoText}>FinanceViz</Text>
+            <Text style={styles.subText}>Web app</Text>
+          </>
+        )}
       </View>
 
-      <View style={styles.navItems}>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Home')}
-        >
-          <Text style={styles.navIcon}>🏠</Text>
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Analytics')}
-        >
-          <Text style={styles.navIcon}>📊</Text>
-          <Text style={styles.navText}>Analytics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Budget')}
-        >
-          <Text style={styles.navIcon}>🧮</Text>
-          <Text style={styles.navText}>Budget</Text>
-        </TouchableOpacity>
+      {/* Navigation */}
+      <View style={styles.sidebarNav}>
+        <MenuItem label="Home" screenName="Home" />
+        <MenuItem label="Analytics" screenName="Analytics" />
+        <MenuItem label="Budget" screenName="BudgetSection" />
       </View>
 
+      {/* Footer */}
       <View style={styles.sidebarFooter}>
-        <Text style={styles.footerText}>Developed By Ratheesh Kumar</Text>
+        <Text style={styles.iconPlaceholder}>⭐</Text>
+        {!collapsed && <Text style={styles.footerText}>Developed by Ratheesh Kumar</Text>}
       </View>
-    </View>
+
+      {/* Toggle Button */}
+      <TouchableOpacity style={styles.toggleButton} onPress={handleToggle}>
+        <Text style={styles.toggleButtonText}>{collapsed ? '➔' : '←'}</Text>
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   sidebar: {
     width: 250,
-    backgroundColor: '#1e1e2f',
-    padding: 16,
+    backgroundColor: '#111520',
+    height: '100%',
+    paddingVertical: 20,
     justifyContent: 'space-between',
+    position: 'relative',
+  },
+  sidebarCollapsed: {
+    width: 80,
   },
   sidebarHeader: {
-    marginBottom: 32,
-  },
-  appLogo: {
     alignItems: 'center',
+    marginBottom: 20,
   },
-  logoIcon: {
-    fontSize: 32,
-    marginBottom: 8,
+  sidebarNav: {
+    flexGrow: 1,
   },
-  logoText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  logoSubtext: {
-    color: '#aaa',
-    fontSize: 12,
-  },
-  navItems: {
-    flex: 1,
+  sidebarFooter: {
+    padding: 20,
+    alignItems: 'center',
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-    marginBottom: 8,
+    paddingHorizontal: 20,
+    gap: 10,
   },
-  navIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    color: 'white',
+  activeNavItem: {
+    backgroundColor: '#3e7bfa',
+    borderRadius: 10,
   },
   navText: {
-    color: 'white',
+    color: '#fff',
     fontSize: 16,
   },
-  sidebarFooter: {
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
+  logoText: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginTop: 8,
+  },
+  subText: {
+    color: '#ccc',
+    fontSize: 12,
   },
   footerText: {
-    color: '#aaa',
+    color: '#fff',
+    marginTop: 8,
     fontSize: 12,
     textAlign: 'center',
   },
+  toggleButton: {
+    position: 'absolute',
+    top: 30,
+    right: -20,
+    width: 40,
+    height: 40,
+    backgroundColor: '#3e7bfa',
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+  },
+  toggleButtonText: {
+    color: '#fff',
+    fontSize: 20,
+  },
+  iconPlaceholder: {
+    fontSize: 20,
+    color: '#fff',
+  },
 });
 
-export default Sidebar; 
+export default Sidebar;
